@@ -1,0 +1,30 @@
+name: Create Release with APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: BestClient ${{ github.ref_name }} (Android)
+          body: |
+            ## BestClient Android Release
+            
+            - **Mimari:** ARM64 (arm64-v8a)
+            - **Sürüm:** ${{ github.ref_name }}
+            - Kurulum için aşağıdaki `BestClient.apk` dosyasını indirip cihazınıza yükleyebilirsiniz.
+          files: BestClient.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
