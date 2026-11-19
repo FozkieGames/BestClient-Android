@@ -16,6 +16,10 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Set permissions
+      run: |
+        chmod +x scripts/android/*.sh scripts/android/files/*.sh scripts/android/files/gradlew || true
+
     - name: Validate Gradle Wrapper
       uses: gradle/actions/wrapper-validation@v4
 
@@ -32,7 +36,7 @@ jobs:
         rustup target add i686-linux-android
         rustup target add aarch64-linux-android
         rustup target add x86_64-linux-android
-        scripts/android/download_android_sdk.sh /home/runner
+        bash scripts/android/download_android_sdk.sh /home/runner
 
     - name: Install Vulkan SDK
       uses: humbletim/install-vulkan-sdk@v1.2
@@ -51,7 +55,7 @@ jobs:
         unset ANDROID_SDK_ROOT
         export PATH=/home/runner/cmake/bin:$PATH
         export TW_ALLOW_NON_REPRODUCIBLE_BUILD=1
-        scripts/android/cmake_android.sh all BestClient org.bestclient.client Release build-android
+        bash scripts/android/cmake_android.sh all BestClient org.bestclient.client Release build-android
         mkdir artifacts
         mv build-android/BestClient.apk artifacts/
 
