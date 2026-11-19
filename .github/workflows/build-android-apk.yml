@@ -1,0 +1,62 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_HTTP_MULTIPLEXING: false
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Validate Gradle Wrapper
+      uses: gradle/actions/wrapper-validation@v4
+
+    - name: Prepare Linux & Android SDK/NDK
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y ninja-build openjdk-21-jdk openssl curl
+        curl -LO https://github.com/Kitware/CMake/releases/download/v3.22.1/cmake-3.22.1-Linux-x86_64.tar.gz
+        mkdir -p /home/runner/cmake
+        tar --strip-components 1 -C /home/runner/cmake -xf cmake-3.22.1-Linux-x86_64.tar.gz
+        rustup default 1.92.0
+        cargo install cargo-ndk
+        rustup target add armv7-linux-androideabi
+        rustup target add i686-linux-android
+        rustup target add aarch64-linux-android
+        rustup target add x86_64-linux-android
+        scripts/android/download_android_sdk.sh /home/runner
+
+    - name: Install Vulkan SDK
+      uses: humbletim/install-vulkan-sdk@v1.2
+      with:
+        version: 1.3.296.0
+        cache: true
+
+    - name: Build Android app
+      env:
+        TW_KEY_NAME: /home/runner/DDNet.jks
+        TW_KEY_ALIAS: DDNet-Key
+      run: |
+        export TW_KEY_PW="$(openssl rand -base64 32)"
+        keytool -genkey -v -keystore "$TW_KEY_NAME" -keyalg RSA -keysize 2048 -validity 10000 -alias "$TW_KEY_ALIAS" -storepass "$TW_KEY_PW" -dname "CN=DDNet CI, OU=DDNet, O=DDNet"
+        export ANDROID_HOME="/home/runner/Android/Sdk"
+        unset ANDROID_SDK_ROOT
+        export PATH=/home/runner/cmake/bin:$PATH
+        export TW_ALLOW_NON_REPRODUCIBLE_BUILD=1
+        scripts/android/cmake_android.sh all BestClient org.bestclient.client Release build-android
+        mkdir artifacts
+        mv build-android/BestClient.apk artifacts/
+
+    - name: Upload BestClient APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: BestClient-Android-APK
+        path: artifacts/BestClient.apk
